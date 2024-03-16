@@ -4,11 +4,17 @@ public class Customer implements Runnable {
     private final ThriftStore store;
     private final int id;
     private final Random random = new Random();
-    private static int totalWaitedTicksForAllCustomers = 0; // Static to track across all instances
+    private  final int MAX_WAIT_TICKS; // Define a timeout
+    private static int totalWaitedTicksForAllCustomers = 0;
 
-    public Customer(ThriftStore store, int id) {
+    public Customer(ThriftStore store, int id, double patienceMultiplier) {
         this.store = store;
         this.id = id;
+        this.MAX_WAIT_TICKS = (int)(100 * patienceMultiplier); // Adjust maximum wait ticks based on multiplier
+    }
+
+    public static int getTotalWaitedTicksForAllCustomers() {
+        return totalWaitedTicksForAllCustomers;
     }
 
     @Override
@@ -20,36 +26,33 @@ public class Customer implements Runnable {
                 int waitedTicksForThisPurchase = 0;
 
                 while (!purchased) {
-                    // Wait if the section is being restocked
-                    if (store.sectionIsBeingStocked(sectionToBuyFrom)) {
-                        int startTick = store.getCurrentTick();
-                        while (store.sectionIsBeingStocked(sectionToBuyFrom)) {
-                            Thread.sleep(ThriftStore.TICK_TIME_SIZE);
-                            waitedTicksForThisPurchase++;
+                    if (store.sectionIsBeingStocked(sectionToBuyFrom) || !store.sectionHasItems(sectionToBuyFrom)) {
+                        if (waitedTicksForThisPurchase >= MAX_WAIT_TICKS) {
+                            if (random.nextBoolean()) { // 50% chance
+                                System.out.printf("<Tick %d> [Thread %d] Customer %d is attempting to buy from section %s.%n",
+                                        store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom);
+                                return; // Customer leaves
+                            } else {
+                                sectionToBuyFrom = selectRandomSection(); // Choose a different section
+                                waitedTicksForThisPurchase = 0; // Reset wait time
+                                System.out.printf("<Tick %d> [Thread %d] Customer %d decides to try a different section after waiting too long.%n",
+                                        store.getCurrentTick(), Thread.currentThread().getId(), id);
+                                continue;
+                            }
                         }
-                        int endTick = store.getCurrentTick();
-                        System.out.printf("<Tick %d> [Thread %d] Customer %d waited %d ticks for section %s to be restocked.%n", endTick, Thread.currentThread().getId(), id, waitedTicksForThisPurchase, sectionToBuyFrom);
-                    }
 
-                    if (store.sectionHasItems(sectionToBuyFrom)) {
+                        Thread.sleep(ThriftStore.TICK_TIME_SIZE);
+                        waitedTicksForThisPurchase++;
+                    } else {
                         store.buyItemFromSection(sectionToBuyFrom);
                         purchased = true;
                         synchronized (Customer.class) {
                             totalWaitedTicksForAllCustomers += waitedTicksForThisPurchase;
                         }
-                        if (waitedTicksForThisPurchase > 0) {
-                            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s after waiting %d ticks.%n", store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom, waitedTicksForThisPurchase);
-                        } else {
-                            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s without the need to wait.%n", store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom);
-                        }
-                    } else {
-                        // If the section is out of stock, wait one tick
-                        Thread.sleep(ThriftStore.TICK_TIME_SIZE);
-                        waitedTicksForThisPurchase++;
+                        logPurchase(waitedTicksForThisPurchase, sectionToBuyFrom);
                     }
                 }
 
-                // Simulate time taken for browsing before the next purchase
                 simulateShoppingDelay();
             }
         } catch (InterruptedException e) {
@@ -64,8 +67,17 @@ public class Customer implements Runnable {
     }
 
     private void simulateShoppingDelay() throws InterruptedException {
-        // Simulate a random delay between shopping actions
         int delay = random.nextInt(10, 50) * ThriftStore.TICK_TIME_SIZE;
         Thread.sleep(delay);
+    }
+
+    private void logPurchase(int waitedTicks, String section) {
+        if (waitedTicks > 0) {
+            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s after waiting %d ticks.%n",
+                    store.getCurrentTick(), Thread.currentThread().getId(), id, section, waitedTicks);
+        } else {
+            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s without the need to wait.%n",
+                    store.getCurrentTick(), Thread.currentThread().getId(), id, section);
+        }
     }
 }
