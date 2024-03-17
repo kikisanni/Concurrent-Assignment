@@ -28,6 +28,12 @@ public class ThriftStore {
     private List<Integer> assistantWorkTimes = new ArrayList<>();
     private List<Integer> assistantBreakTimes = new ArrayList<>();
 
+    public ThriftStore(Config config) {
+        this.config = config;
+        initializeSections();
+        initialDelivery();
+    }
+    
     // Method to add an assistant
     public void addAssistant(Assistant assistant) {
         assistantsList.add(assistant);
@@ -47,26 +53,43 @@ public class ThriftStore {
         return customersList;
     }
 
-    public ThriftStore(Config config) {
-        this.config = config;
-        initializeSections();
-        initialDelivery();
-    }
     public Config getConfig() {
         return config;
     }
     private void initializeSections() {
-        // Initialize standard sections
-        sections.put("electronics", new Section("electronics", INITIAL_SECTION_ITEMS));
-        sections.put("clothing", new Section("clothing", INITIAL_SECTION_ITEMS));
-        sections.put("furniture", new Section("furniture", INITIAL_SECTION_ITEMS));
-        sections.put("toys", new Section("toys", INITIAL_SECTION_ITEMS));
-        sections.put("sporting goods", new Section("sporting goods", INITIAL_SECTION_ITEMS));
-        sections.put("books", new Section("books", INITIAL_SECTION_ITEMS));
-        // Initialize additional sections based on config
-        for (int i = 1; i <= config.numberOfAdditionalSections; i++) {
-            sections.put("Section " + i, new Section("Section " + i, INITIAL_SECTION_ITEMS));
+        // Initialize each section type based on its configured number
+        addSections("electronics", config.numberOfElectronicsSections, INITIAL_SECTION_ITEMS);
+        addSections("clothing", config.numberOfClothingSections, INITIAL_SECTION_ITEMS);
+        addSections("furniture", config.numberOfFurnitureSections, INITIAL_SECTION_ITEMS);
+        addSections("toys", config.numberOfToysSections, INITIAL_SECTION_ITEMS);
+        addSections("sporting goods", config.numberOfSportingGoodsSections, INITIAL_SECTION_ITEMS);
+        addSections("books", config.numberOfBooksSections, INITIAL_SECTION_ITEMS);
+    }
+    
+    private void addSections(String baseName, int count, int initialItems) {
+        for (int i = 1; i <= count; i++) {
+            String sectionName = baseName + (count > 1 ? " " + i : "");
+            sections.put(sectionName, new Section(sectionName, initialItems));
         }
+    }
+    public boolean isSectionPopular(String sectionName) {
+        // Example threshold for popularity; adjust based on simulation needs
+        final double popularityThreshold = 0.15;
+    
+        // Map section names to their purchase probability
+        Map<String, Double> purchaseProbabilities = new HashMap<>();
+        purchaseProbabilities.put("electronics", config.customerPurchaseProbabilityElectronics);
+        purchaseProbabilities.put("clothing", config.customerPurchaseProbabilityClothing);
+        purchaseProbabilities.put("furniture", config.customerPurchaseProbabilityFurniture);
+        purchaseProbabilities.put("toys", config.customerPurchaseProbabilityToys);
+        purchaseProbabilities.put("sporting goods", config.customerPurchaseProbabilitySportingGoods);
+        purchaseProbabilities.put("books", config.customerPurchaseProbabilityBooks);
+    
+        // Identify the base name of the section to check against the purchase probabilities
+        String baseSectionName = sectionName.replaceAll("\\s\\d+$", ""); // Remove trailing numbers (e.g., "electronics 1" -> "electronics")
+    
+        // Determine if the section is popular based on its purchase probability
+        return purchaseProbabilities.getOrDefault(baseSectionName, 0.0) > popularityThreshold;
     }
 
     public Map<String, Integer> takeItemsFromDelivery() {
@@ -161,8 +184,6 @@ public class ThriftStore {
         return delivery;
     }
 
-
-
     private Map<String, Integer> generateRandomDelivery() {
         Map<String, Integer> delivery = new HashMap<>();
         int itemsLeft = randgen.nextInt(config.maxItemsPerDelivery) + 1; // Adjust maximum items per delivery
@@ -202,84 +223,49 @@ public class ThriftStore {
         double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
         double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
         
-        // Basic statistics
         System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
         System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
         System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime);
         
-        // Additional analysis
-        System.out.printf("Distribution of Customer Wait Times: %s\n", calculateDistribution(customerWaitTimes));
-        System.out.printf("Distribution of Assistant Work Times: %s\n", calculateDistribution(assistantWorkTimes));
-        System.out.printf("Distribution of Assistant Break Times: %s\n", calculateDistribution(assistantBreakTimes));
-        
-        
-        // Trade-off analysis
-        double tradeOffRatio = averageCustomerWaitTime / averageAssistantWorkTime;
-        System.out.printf("Customer Wait to Assistant Work Ratio: %.2f\n", tradeOffRatio);
-        
-        
+        System.out.println("Distribution of Customer Wait Times: " + calculateDistribution(customerWaitTimes));
+        System.out.println("Distribution of Assistant Work Times: " + calculateDistribution(assistantWorkTimes));
+        System.out.println("Distribution of Assistant Break Times: " + calculateDistribution(assistantBreakTimes));
+    
+        double customerWaitToWorkRatio = averageCustomerWaitTime / averageAssistantWorkTime;
+        System.out.printf("Customer Wait to Assistant Work Ratio: %.2f\n", customerWaitToWorkRatio);
+    
         System.out.println("Work Time Distribution:\n" + generateHistogram(assistantWorkTimes));
         System.out.println("Wait Time Distribution:\n" + generateHistogram(customerWaitTimes));
         System.out.println("Break Time Distribution:\n" + generateHistogram(assistantBreakTimes));
     }
-
+    
+    private double calculateAverage(List<Integer> times) {
+        if (times.isEmpty()) return 0.0;
+        return times.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+    }
+    
+    private String calculateDistribution(List<Integer> times) {
+        if (times.isEmpty()) return "No data";
+        Map<Integer, Long> distribution = times.stream().collect(Collectors.groupingBy(t -> t, Collectors.counting()));
+        return distribution.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> entry.getKey() + " ticks: " + entry.getValue())
+                .collect(Collectors.joining(", "));
+    }
+    
     private String generateHistogram(List<Integer> times) {
-        if (times.isEmpty()) {
-            return "No data.";
-        }
-
-        final int INTERVAL = 10; // Histogram interval
+        if (times.isEmpty()) return "No data";
+        final int INTERVAL = 10;
         Map<Integer, Integer> histogram = new TreeMap<>();
         times.forEach(time -> {
             int key = (time / INTERVAL) * INTERVAL;
             histogram.put(key, histogram.getOrDefault(key, 0) + 1);
         });
-
-        StringBuilder histogramString = new StringBuilder();
-        histogram.forEach((key, value) -> {
-            histogramString.append(String.format("%3d - %3d | %s%n", key, key + INTERVAL - 1, "*".repeat(value)));
-        });
-
-        return histogramString.toString();
-    }
-
-    private double calculateMedian(List<Integer> times) {
-        if (times.isEmpty()) {
-            return 0.0;
-        }
-
-        Collections.sort(times);
-        int middle = times.size() / 2;
-        if (times.size() % 2 == 1) {
-            return times.get(middle);
-        } else {
-            return (times.get(middle - 1) + times.get(middle)) / 2.0;
-        }
-    }
-
-    private int calculateMode(List<Integer> times) {
-        if (times.isEmpty()) {
-            return 0;
-        }
-
-        Map<Integer, Integer> frequencyMap = new HashMap<>();
-        times.forEach(time -> frequencyMap.put(time, frequencyMap.getOrDefault(time, 0) + 1));
-        return Collections.max(frequencyMap.entrySet(), Map.Entry.comparingByValue()).getKey();
-    }
-
-    private double calculateAverage(List<Integer> times) {
-        if (times.isEmpty()) {
-            return 0.0;
-        }
-        return times.stream().mapToInt(Integer::intValue).average().getAsDouble();
-    }
-
-    private String calculateDistribution(List<Integer> times) {
-        Map<Integer, Long> distribution = times.stream().collect(Collectors.groupingBy(t -> t, Collectors.counting()));
-        return distribution.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> String.format("%d ticks: %d", entry.getKey(), entry.getValue()))
-                .collect(Collectors.joining(", "));
+        StringBuilder histogramBuilder = new StringBuilder();
+        histogram.forEach((key, value) ->
+            histogramBuilder.append(String.format("%3d - %3d | %s\n", key, key + INTERVAL - 1, "*".repeat(value)))
+        );
+        return histogramBuilder.toString();
     }
 
     // Enhanced methods to update metrics (called from appropriate places in Assistant and Customer classes)
@@ -294,9 +280,39 @@ public class ThriftStore {
     public synchronized void recordAssistantBreakTime(int breakTime) {
         assistantBreakTimes.add(breakTime);
     }
+    public boolean isStoreBusy() {
+        // Example: Consider the store busy if the number of active customers exceeds a threshold
+        return getActiveCustomerCount() > config.busyCustomerThreshold;
+    }
+    
+    public int getActiveCustomerCount() {
+        // Active customers could be determined by customers currently in the store or attempting purchases
+        return customersList.size(); // Simplified example
+    }
 
     public static void main(String[] args) throws InterruptedException {
-        Config config = new Config(3, 2, 0.5, 100, 10, 1.5, 200, 300, 150); // Example new configuration
+            Config config = new Config(
+            3, // numberOfAssistants
+            1, // numberOfElectronicsSections
+            1, // numberOfClothingSections
+            1, // numberOfFurnitureSections
+            1, // numberOfToysSections
+            1, // numberOfSportingGoodsSections
+            1, // numberOfBooksSections
+            0.1, // customerPurchaseProbabilityElectronics
+            0.2, // customerPurchaseProbabilityClothing
+            0.15, // customerPurchaseProbabilityFurniture
+            0.25, // customerPurchaseProbabilityToys
+            0.05, // customerPurchaseProbabilitySportingGoods
+            0.2, // customerPurchaseProbabilityBooks
+            100, // deliveryFrequencyTicks
+            10, // maxItemsPerDelivery
+            1.5, // customerPatienceMultiplier
+            200, // minBreakInterval
+            300, // maxBreakInterval
+            150, // breakDurationTicks
+            1
+    );
         ThriftStore store = new ThriftStore(config);
         
         // Register the shutdown hook here, before the infinite loop

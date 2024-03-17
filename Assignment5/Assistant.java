@@ -8,9 +8,6 @@ public class Assistant implements Runnable {
     private final Random random = new Random();
     private int totalWaitedTicks = 0;
     private int ticksSinceLastBreak = 0;
-    private static final int BREAK_DURATION_TICKS = 150;
-    private static final int MIN_BREAK_INTERVAL = 200;
-    private static final int MAX_BREAK_INTERVAL = 300;
     private int totalWorkedTicks = 0;
 
     public Assistant(ThriftStore store, int id) {
@@ -26,20 +23,16 @@ public class Assistant implements Runnable {
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                // Get break configuration from store's Config
-                int minBreakInterval = store.getConfig().minBreakInterval;
-                int maxBreakInterval = store.getConfig().maxBreakInterval;
-                int breakDurationTicks = store.getConfig().breakDurationTicks;
-
-                if (ticksSinceLastBreak >= minBreakInterval && ticksSinceLastBreak <= maxBreakInterval) {
+                if (ticksSinceLastBreak >= getRandomBreakInterval()) {
+                    int breakDuration = store.getConfig().breakDurationTicks; // Assume this is 150 ticks
                     System.out.printf("<Tick %d> [Thread %d] Assistant %d is taking a break for %d ticks.%n",
-                            store.getCurrentTick(), Thread.currentThread().getId(), id, breakDurationTicks);
-                    Thread.sleep(breakDurationTicks * ThriftStore.TICK_TIME_SIZE);
+                                      store.getCurrentTick(), Thread.currentThread().getId(), id, breakDuration);
+                    Thread.sleep(breakDuration * ThriftStore.TICK_TIME_SIZE);
                     ticksSinceLastBreak = 0; // Reset ticks since last break
                     System.out.printf("<Tick %d> [Thread %d] Assistant %d has finished their break.%n",
-                            store.getCurrentTick(), Thread.currentThread().getId(), id);
-                    continue; // Skip to the next iteration to avoid stocking immediately after a break
-                }
+                                      store.getCurrentTick(), Thread.currentThread().getId(), id);
+                    continue;
+                } 
 
                 synchronized (store.getDeliveryLock()) {
                     while (store.deliveryBoxIsEmpty()) {
@@ -91,5 +84,8 @@ public class Assistant implements Runnable {
             System.out.printf("<Tick %d> [Thread %d] Assistant %d interrupted.%n",
                     store.getCurrentTick(), Thread.currentThread().getId(), id);
         }
+    }
+    private int getRandomBreakInterval() {
+        return random.nextInt(store.getConfig().maxBreakInterval - store.getConfig().minBreakInterval + 1) + store.getConfig().minBreakInterval;
     }
 }

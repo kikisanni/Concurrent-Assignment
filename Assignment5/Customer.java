@@ -1,4 +1,7 @@
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class Customer implements Runnable {
     private final ThriftStore store;
@@ -24,41 +27,43 @@ public class Customer implements Runnable {
                 String sectionToBuyFrom = selectRandomSection();
                 boolean purchased = false;
                 int waitedTicksForThisPurchase = 0;
-
+    
                 while (!purchased) {
                     if (store.sectionIsBeingStocked(sectionToBuyFrom) || !store.sectionHasItems(sectionToBuyFrom)) {
-                        if (waitedTicksForThisPurchase >= MAX_WAIT_TICKS) {
-                            if (random.nextBoolean()) { // 50% chance
-                                System.out.printf("<Tick %d> [Thread %d] Customer %d is attempting to buy from section %s.%n",
-                                        store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom);
-                                return; // Customer leaves
-                            } else {
-                                sectionToBuyFrom = selectRandomSection(); // Choose a different section
-                                waitedTicksForThisPurchase = 0; // Reset wait time
-                                System.out.printf("<Tick %d> [Thread %d] Customer %d decides to try a different section after waiting too long.%n",
-                                        store.getCurrentTick(), Thread.currentThread().getId(), id);
-                                continue;
-                            }
+                        if (shouldLeaveDueToWait(waitedTicksForThisPurchase)) {
+                            System.out.printf("<Tick %d> [Thread %d] Customer %d leaves after waiting too long.%n",
+                                              store.getCurrentTick(), Thread.currentThread().getId(), id);
+                            return; // Customer leaves
+                        } else if (waitedTicksForThisPurchase >= MAX_WAIT_TICKS) {
+                            sectionToBuyFrom = selectAlternativeSection(sectionToBuyFrom); // Select alternative section
+                            waitedTicksForThisPurchase = 0; // Reset wait time
+                        } else {
+                            Thread.sleep(ThriftStore.TICK_TIME_SIZE);
+                            waitedTicksForThisPurchase++;
                         }
-
-                        Thread.sleep(ThriftStore.TICK_TIME_SIZE);
-                        waitedTicksForThisPurchase++;
-                    } else {
-                        store.buyItemFromSection(sectionToBuyFrom);
-                        purchased = true;
-                        synchronized (Customer.class) {
-                            totalWaitedTicksForAllCustomers += waitedTicksForThisPurchase;
+                    } else  {
+                        // Adjust purchase attempt based on dynamic conditions
+                        if (attemptPurchaseBasedOnDynamicConditions(sectionToBuyFrom, waitedTicksForThisPurchase)) {
+                            store.buyItemFromSection(sectionToBuyFrom);
+                            purchased = true;
+                            logPurchase(waitedTicksForThisPurchase, sectionToBuyFrom);
                         }
-                        logPurchase(waitedTicksForThisPurchase, sectionToBuyFrom);
                     }
                 }
-
                 simulateShoppingDelay();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.out.printf("<%d> Customer %d has been interrupted.%n", store.getCurrentTick(), id);
         }
+    }
+    private boolean attemptPurchaseBasedOnDynamicConditions(String sectionToBuyFrom, int waitedTicks) {
+        // Logic to dynamically adjust the probability of attempting a purchase
+        double baseProbability = 0.5; // Start with a base probability
+        double stockLevelAdjustmentFactor = store.sectionIsLowOnStock(sectionToBuyFrom) ? -0.2 : 0.2;
+        double waitTimeAdjustmentFactor = Math.min(0.5, waitedTicks / 100.0);
+
+        double adjustedProbability = baseProbability + stockLevelAdjustmentFactor + waitTimeAdjustmentFactor;
+        return random.nextDouble() < adjustedProbability;
     }
 
     private String selectRandomSection() {
@@ -79,5 +84,26 @@ public class Customer implements Runnable {
             System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s without the need to wait.%n",
                     store.getCurrentTick(), Thread.currentThread().getId(), id, section);
         }
+    }
+    private boolean shouldLeaveDueToWait(int waitedTicks) {
+        int dynamicWaitThreshold = MAX_WAIT_TICKS; // Base wait threshold
+        if(store.isStoreBusy()) {
+            dynamicWaitThreshold *= 0.75; // Less patience if store is busy
+        } else {
+            dynamicWaitThreshold *= 1.25; // More patience if store is less busy
+        }
+        return waitedTicks > dynamicWaitThreshold;
+    }
+    private String selectAlternativeSection(String currentSection) {
+    String[] sections = store.getSectionNames();
+    // Filter out the current section and any sections low on stock
+    List<String> availableSections = Arrays.stream(sections)
+                                           .filter(s -> !s.equals(currentSection) && store.sectionHasItems(s))
+                                           .collect(Collectors.toList());
+    if (availableSections.isEmpty()) {
+        return currentSection; // Stick with the current section if no better options
+    }
+    // Randomly select from available sections
+    return availableSections.get(random.nextInt(availableSections.size()));
     }
 }
