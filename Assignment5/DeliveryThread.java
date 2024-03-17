@@ -19,7 +19,7 @@ public class DeliveryThread implements Runnable {
                 String deliveredItems = delivery.entrySet().stream()
                     .map(entry -> entry.getKey() + "=" + entry.getValue())
                     .collect(Collectors.joining(", "));
-                System.out.printf("[Thread %d] Deposit of items: %s%n", Thread.currentThread().getId(), deliveredItems);
+                    System.out.printf("<Tick %d> [Thread %d] Scheduled delivery of items: %s in %d ticks%n", store.getCurrentTick(), Thread.currentThread().getId(), deliveredItems, calculateDeliveryInterval());
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -27,7 +27,7 @@ public class DeliveryThread implements Runnable {
     }
 
     private long calculateDeliveryInterval() {
-        // Simulate delivery every 100 ticks on average
-        return (long) (Math.random() * 2 * ThriftStore.TICK_TIME_SIZE * 100);
+        // Use the deliveryFrequencyTicks from the store's config
+        return (long) (Math.random() * 2 * store.getConfig().deliveryFrequencyTicks);
     }
 }
