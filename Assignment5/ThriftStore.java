@@ -202,13 +202,37 @@ public class ThriftStore {
         if (randgen.nextDouble() < 1.0 / 100) {
             simulateDelivery();
         }
+        // Assuming 1000 ticks represent one day in the simulation
         if (tickCount.get() % 1000 == 0) {
             System.out.printf("<Tick %d> The day has ended. Preparing for a new day.%n", tickCount.get());
+            // Perform end-of-day analysis here
+            generateEnhancedReport(); // Generate the report at the end of each day
         }
     }
+    
+
+
+    private Map<String, Integer> generateInitialDelivery() {
+        Map<String, Integer> initialDelivery = new HashMap<>();
+        String[] categories = {"electronics", "clothing", "toys", "sporting goods", "furniture", "books"};
+        int itemsLeft = 10; // Ensure the total items for the initial delivery is 10
+    
+        Random random = new Random();
+        while (itemsLeft > 0) {
+            for (String category : categories) {
+                if (itemsLeft == 0) break;
+                int items = random.nextInt(itemsLeft) + 1; // Distribute items randomly
+                initialDelivery.put(category, initialDelivery.getOrDefault(category, 0) + items);
+                itemsLeft -= items;
+                if (itemsLeft <= 0) break;
+            }
+        }
+        return initialDelivery;
+    }
+    
 
     public synchronized void initialDelivery() {
-        Map<String, Integer> initialDelivery = generateRandomDelivery();
+        Map<String, Integer> initialDelivery = generateInitialDelivery(); // Adjusted line
         itemsForDelivery.putAll(initialDelivery);
         String deliveryLog = initialDelivery.entrySet().stream()
                                             .map(e -> e.getKey() + "=" + e.getValue())
@@ -216,6 +240,31 @@ public class ThriftStore {
         System.out.printf("<Tick %d> The first delivery: %s%n", getCurrentTick(), deliveryLog);
         initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItem(itemCount));
     }
+    
+
+
+    public synchronized void processDelivery(Map<String, Integer> delivery) {
+        itemsForDelivery.putAll(delivery);
+        synchronized (deliveryLock) {
+            deliveryLock.notifyAll();
+        }
+        logDelivery(delivery); // Correctly call the newly added method
+    }
+
+    // Implement the logDelivery method to log delivery details
+    private void logDelivery(Map<String, Integer> delivery) {
+        if (delivery.isEmpty()) {
+            System.out.println("<Tick " + getCurrentTick() + "> No items were delivered.");
+            return;
+        }
+
+        String deliveryDetails = delivery.entrySet().stream()
+                                         .map(entry -> entry.getKey() + ": " + entry.getValue())
+                                         .collect(Collectors.joining(", "));
+        System.out.printf("<Tick %d> Delivery received: %s%n", getCurrentTick(), deliveryDetails);
+    }
+
+    
 
     // Enhanced reporting method
     public void generateEnhancedReport() {
@@ -314,9 +363,6 @@ public class ThriftStore {
             1
     );
         ThriftStore store = new ThriftStore(config);
-        
-        // Register the shutdown hook here, before the infinite loop
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> store.generateEnhancedReport()));
 
         // Starting the delivery thread
         new Thread(new DeliveryThread(store), "DeliveryThread").start();

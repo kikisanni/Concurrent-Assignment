@@ -81,7 +81,7 @@ public class Customer implements Runnable {
             System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s after waiting %d ticks.%n",
                     store.getCurrentTick(), Thread.currentThread().getId(), id, section, waitedTicks);
         } else {
-            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s without the need to wait.%n",
+            System.out.printf("<Tick %d> [Thread %d] Customer %d bought item from section %s.%n",
                     store.getCurrentTick(), Thread.currentThread().getId(), id, section);
         }
     }
