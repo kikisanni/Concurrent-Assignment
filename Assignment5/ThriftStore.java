@@ -27,12 +27,39 @@ public class ThriftStore {
     private List<Integer> customerWaitTimes = new ArrayList<>();
     private List<Integer> assistantWorkTimes = new ArrayList<>();
     private List<Integer> assistantBreakTimes = new ArrayList<>();
+    private AtomicInteger totalWaitTicks = new AtomicInteger();
+    private AtomicInteger totalWalkTicks = new AtomicInteger();
+    private AtomicInteger totalStockTicks = new AtomicInteger();
+    private AtomicInteger totalBreakTicks = new AtomicInteger();
+    private AtomicInteger totalWorkTicks = new AtomicInteger();
+
 
     public ThriftStore(Config config) {
         this.config = config;
         initializeSections();
         initialDelivery();
     }
+
+    public synchronized void addWaitTicks(int ticks) {
+        totalWaitTicks.addAndGet(ticks);
+    }
+
+    public synchronized void addWalkTicks(int ticks) {
+        totalWalkTicks.addAndGet(ticks);
+    }
+
+    public synchronized void addStockTicks(int ticks) {
+        totalStockTicks.addAndGet(ticks);
+    }
+
+    public synchronized void addBreakTicks(int ticks) {
+        totalBreakTicks.addAndGet(ticks);
+    }
+
+    public synchronized void addWorkTicks(int ticks) {
+        totalWorkTicks.addAndGet(ticks);
+    }
+    
     
     // Method to add an assistant
     public void addAssistant(Assistant assistant) {
@@ -161,6 +188,7 @@ public class ThriftStore {
         return sections.keySet().toArray(new String[0]);
     }
 
+    // Getter method for the current tick count
     public int getCurrentTick() {
         return tickCount.get();
     }
@@ -169,20 +197,11 @@ public class ThriftStore {
         return deliveryLock;
     }
 
-    public synchronized Map<String, Integer> simulateDelivery() {
-        Map<String, Integer> delivery = generateRandomDelivery();
-        synchronized (deliveryLock) {
-            itemsForDelivery.putAll(delivery);
-            deliveryLock.notifyAll(); // Notify assistants that new items have arrived
-        }
-        // Log the delivery
-        String deliveryLog = delivery.entrySet().stream()
-                .map(entry -> entry.getKey() + "=" + entry.getValue())
-                .collect(Collectors.joining(", "));
-        System.out.printf("<Tick %d> [Thread %d] Delivery of items: %s%n", getCurrentTick(), Thread.currentThread().getId(), deliveryLog);
-        // Return the map of delivered items
-        return delivery;
+    public synchronized void simulateDelivery(Map<String, Integer> delivery) {
+        itemsForDelivery.putAll(delivery);
+        logDelivery(delivery); // This method should log the delivery details.
     }
+    
 
     private Map<String, Integer> generateRandomDelivery() {
         Map<String, Integer> delivery = new HashMap<>();
@@ -197,20 +216,39 @@ public class ThriftStore {
         return delivery;
     }
 
-    public void simulateTick() {
-        tickCount.incrementAndGet();
-        if (randgen.nextDouble() < 1.0 / 100) {
-            simulateDelivery();
+
+    public void incrementTickCountBy(int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            tickCount.incrementAndGet();
+            // Optionally simulate real-time passing with Thread.sleep(TICK_TIME_SIZE);
         }
-        // Assuming 1000 ticks represent one day in the simulation
+        System.out.printf("Global tick count increased by %d, total now %d ticks.\n", ticks, tickCount.get());
+    }
+
+
+    // Method to increment the tick count
+    public void incrementTickCount() {
+        tickCount.incrementAndGet();
+    }
+
+
+    public void simulateTick() {
+        // Increment the tick count for each simulation tick
+        tickCount.incrementAndGet();
+    
+        // Assuming 1000 ticks represent one day in the simulation,
+        // log a message at the end of each day
         if (tickCount.get() % 1000 == 0) {
             System.out.printf("<Tick %d> The day has ended. Preparing for a new day.%n", tickCount.get());
-            // Perform end-of-day analysis here
-            generateEnhancedReport(); // Generate the report at the end of each day
+            // Here, you can also invoke any end-of-day processing or reporting methods
+            generateEnhancedReport(); // Example call to an end-of-day reporting method
         }
+        
+        // Additional simulation logic can be placed here, if necessary
     }
     
-
+    
+    
 
     private Map<String, Integer> generateInitialDelivery() {
         Map<String, Integer> initialDelivery = new HashMap<>();
@@ -245,77 +283,82 @@ public class ThriftStore {
 
     public synchronized void processDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
-        synchronized (deliveryLock) {
-            deliveryLock.notifyAll();
-        }
-        logDelivery(delivery); // Correctly call the newly added method
+        logDelivery(delivery); // Log the delivery
     }
-
-    // Implement the logDelivery method to log delivery details
+    
+    
     private void logDelivery(Map<String, Integer> delivery) {
         if (delivery.isEmpty()) {
             System.out.println("<Tick " + getCurrentTick() + "> No items were delivered.");
             return;
         }
-
         String deliveryDetails = delivery.entrySet().stream()
                                          .map(entry -> entry.getKey() + ": " + entry.getValue())
                                          .collect(Collectors.joining(", "));
         System.out.printf("<Tick %d> Delivery received: %s%n", getCurrentTick(), deliveryDetails);
     }
-
     
+        
 
     // Enhanced reporting method
+    // public void generateEnhancedReport() {
+    //     double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
+    //     double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
+    //     double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
+        
+    //     System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
+    //     System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
+    //     System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime);
+        
+    //     System.out.println("Distribution of Customer Wait Times: " + calculateDistribution(customerWaitTimes));
+    //     System.out.println("Distribution of Assistant Work Times: " + calculateDistribution(assistantWorkTimes));
+    //     System.out.println("Distribution of Assistant Break Times: " + calculateDistribution(assistantBreakTimes));
+    
+    //     double customerWaitToWorkRatio = averageCustomerWaitTime / averageAssistantWorkTime;
+    //     System.out.printf("Customer Wait to Assistant Work Ratio: %.2f\n", customerWaitToWorkRatio);
+    
+    //     System.out.println("Work Time Distribution:\n" + generateHistogram(assistantWorkTimes));
+    //     System.out.println("Wait Time Distribution:\n" + generateHistogram(customerWaitTimes));
+    //     System.out.println("Break Time Distribution:\n" + generateHistogram(assistantBreakTimes));
+    // }
+
     public void generateEnhancedReport() {
-        double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
-        double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
-        double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
-        
-        System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
-        System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
-        System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime);
-        
-        System.out.println("Distribution of Customer Wait Times: " + calculateDistribution(customerWaitTimes));
-        System.out.println("Distribution of Assistant Work Times: " + calculateDistribution(assistantWorkTimes));
-        System.out.println("Distribution of Assistant Break Times: " + calculateDistribution(assistantBreakTimes));
-    
-        double customerWaitToWorkRatio = averageCustomerWaitTime / averageAssistantWorkTime;
-        System.out.printf("Customer Wait to Assistant Work Ratio: %.2f\n", customerWaitToWorkRatio);
-    
-        System.out.println("Work Time Distribution:\n" + generateHistogram(assistantWorkTimes));
-        System.out.println("Wait Time Distribution:\n" + generateHistogram(customerWaitTimes));
-        System.out.println("Break Time Distribution:\n" + generateHistogram(assistantBreakTimes));
+        System.out.println("End of Day Report:");
+        System.out.printf("Total Wait Ticks: %d%n", totalWaitTicks.get());
+        System.out.printf("Total Work Ticks: %d%n", totalWorkTicks.get());
+        System.out.printf("Total Break Ticks: %d%n", totalBreakTicks.get());
+        // Include additional analysis and metrics as needed.
     }
     
-    private double calculateAverage(List<Integer> times) {
-        if (times.isEmpty()) return 0.0;
-        return times.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-    }
     
-    private String calculateDistribution(List<Integer> times) {
-        if (times.isEmpty()) return "No data";
-        Map<Integer, Long> distribution = times.stream().collect(Collectors.groupingBy(t -> t, Collectors.counting()));
-        return distribution.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> entry.getKey() + " ticks: " + entry.getValue())
-                .collect(Collectors.joining(", "));
-    }
+    // private double calculateAverage(List<Integer> times) {
+    //     if (times.isEmpty()) return 0.0;
+    //     return times.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+    // }
     
-    private String generateHistogram(List<Integer> times) {
-        if (times.isEmpty()) return "No data";
-        final int INTERVAL = 10;
-        Map<Integer, Integer> histogram = new TreeMap<>();
-        times.forEach(time -> {
-            int key = (time / INTERVAL) * INTERVAL;
-            histogram.put(key, histogram.getOrDefault(key, 0) + 1);
-        });
-        StringBuilder histogramBuilder = new StringBuilder();
-        histogram.forEach((key, value) ->
-            histogramBuilder.append(String.format("%3d - %3d | %s\n", key, key + INTERVAL - 1, "*".repeat(value)))
-        );
-        return histogramBuilder.toString();
-    }
+    // private String calculateDistribution(List<Integer> times) {
+    //     if (times.isEmpty()) return "No data";
+    //     Map<Integer, Long> distribution = times.stream().collect(Collectors.groupingBy(t -> t, Collectors.counting()));
+    //     return distribution.entrySet().stream()
+    //             .sorted(Map.Entry.comparingByKey())
+    //             .map(entry -> entry.getKey() + " ticks: " + entry.getValue())
+    //             .collect(Collectors.joining(", "));
+    // }
+    
+    // private String generateHistogram(List<Integer> times) {
+    //     if (times.isEmpty()) return "No data";
+    //     final int INTERVAL = 10;
+    //     Map<Integer, Integer> histogram = new TreeMap<>();
+    //     times.forEach(time -> {
+    //         int key = (time / INTERVAL) * INTERVAL;
+    //         histogram.put(key, histogram.getOrDefault(key, 0) + 1);
+    //     });
+    //     StringBuilder histogramBuilder = new StringBuilder();
+    //     histogram.forEach((key, value) ->
+    //         histogramBuilder.append(String.format("%3d - %3d | %s\n", key, key + INTERVAL - 1, "*".repeat(value)))
+    //     );
+    //     return histogramBuilder.toString();
+    // }
 
     // Enhanced methods to update metrics (called from appropriate places in Assistant and Customer classes)
     public synchronized void recordCustomerWaitTime(int waitTime) {
@@ -364,8 +407,10 @@ public class ThriftStore {
     );
         ThriftStore store = new ThriftStore(config);
 
+
         // Starting the delivery thread
-        new Thread(new DeliveryThread(store), "DeliveryThread").start();
+        // new Thread(new DeliveryThread(store), "DeliveryThread").start();
+        new Thread(new DeliveryThread(store)).start();
     
         // Starting multiple assistant threads based on config.numberOfAssistants
         for (int i = 0; i < config.numberOfAssistants; i++) {
@@ -380,11 +425,12 @@ public class ThriftStore {
             store.addCustomer(customer); // Add customer to the store's list
             new Thread(customer, "Customer-" + (i + 1)).start();
         }
-    
+
         // Simulate thrift store operation
         while (true) {
             Thread.sleep(ThriftStore.TICK_TIME_SIZE);
-            store.simulateTick();
+            store.simulateTick(); // Process the tick
         }
+
     }
 }
