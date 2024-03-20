@@ -77,6 +77,6 @@ public class Customer implements Runnable {
 
     private void logAndGUIUpdate(String message) {
         System.out.println(message);
-        store.getGui().updateCustomerInfo(message); // Update the GUI with the customer's actions
+        store.getGui().updateCustomerInformation(message); // Update the GUI with the customer's actions
     }
 }

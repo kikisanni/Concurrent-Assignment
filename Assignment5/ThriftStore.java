@@ -292,7 +292,7 @@ public class ThriftStore {
     public synchronized void processDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
         logDelivery(delivery); // Log the delivery
-        gui.updateDeliveryInfo(delivery.toString());
+        gui.updateDeliveryInformation(delivery.toString());
     }
     
     

@@ -115,6 +115,6 @@ public class Assistant implements Runnable {
     //reflects the actions of the assistant in the store's graphical user interface.
     private void logAndUpdateGUI(String message) {
         System.out.println(message);
-        store.getGui().updateAssistantInfo(message);
+        store.getGui().updateAssistantInformation(message);
     }
 }
