@@ -9,6 +9,7 @@ public class Customer implements Runnable {
     private final Random random = new Random();
     private  final int MAX_WAIT_TICKS; // Define a timeout
     private static int totalWaitedTicksForAllCustomers = 0;
+    private int totalWaitTime = 0; // Tracks the total wait time of this customer
 
     public Customer(ThriftStore store, int id, double patienceMultiplier) {
         this.store = store;
@@ -18,6 +19,11 @@ public class Customer implements Runnable {
 
     public static int getTotalWaitedTicksForAllCustomers() {
         return totalWaitedTicksForAllCustomers;
+    }
+
+    private void recordTotalWaitTime() {
+        // Correct invocation of recording wait time in ThriftStore
+        store.recordCustomerWaitTime(this.totalWaitTime);
     }
 
     @Override
@@ -49,6 +55,7 @@ public class Customer implements Runnable {
                             logPurchase(waitedTicksForThisPurchase, sectionToBuyFrom);
                         }
                     }
+                    recordTotalWaitTime();
                 }
                 simulateShoppingDelay();
             }
@@ -56,6 +63,9 @@ public class Customer implements Runnable {
             Thread.currentThread().interrupt();
         }
     }
+
+
+
     private boolean attemptPurchaseBasedOnDynamicConditions(String sectionToBuyFrom, int waitedTicks) {
         // Logic to dynamically adjust the probability of attempting a purchase
         double baseProbability = 0.5; // Start with a base probability

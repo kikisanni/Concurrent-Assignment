@@ -24,14 +24,15 @@ public class ThriftStore {
     private List<Assistant> assistantsList = new CopyOnWriteArrayList<>();
     private List<Customer> customersList = new CopyOnWriteArrayList<>();
     // Enhanced metrics tracking
-    private List<Integer> customerWaitTimes = new ArrayList<>();
-    private List<Integer> assistantWorkTimes = new ArrayList<>();
+    private final List<Integer> customerWaitTimes = Collections.synchronizedList(new ArrayList<>());
+    private final List<Integer> assistantWorkTimes = Collections.synchronizedList(new ArrayList<>());
     private List<Integer> assistantBreakTimes = new ArrayList<>();
     private AtomicInteger totalWaitTicks = new AtomicInteger();
     private AtomicInteger totalWalkTicks = new AtomicInteger();
     private AtomicInteger totalStockTicks = new AtomicInteger();
     private AtomicInteger totalBreakTicks = new AtomicInteger();
     private AtomicInteger totalWorkTicks = new AtomicInteger();
+
 
 
     public ThriftStore(Config config) {
@@ -240,8 +241,7 @@ public class ThriftStore {
         // log a message at the end of each day
         if (tickCount.get() % 1000 == 0) {
             System.out.printf("<Tick %d> The day has ended. Preparing for a new day.%n", tickCount.get());
-            // Here, you can also invoke any end-of-day processing or reporting methods
-            generateEnhancedReport(); // Example call to an end-of-day reporting method
+            generateEnhancedReport();
         }
         
         // Additional simulation logic can be placed here, if necessary
@@ -322,14 +322,25 @@ public class ThriftStore {
     //     System.out.println("Break Time Distribution:\n" + generateHistogram(assistantBreakTimes));
     // }
 
+    // The enhanced report generation method
     public void generateEnhancedReport() {
+        double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
+        double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
+        double averageAssistantBreakTime = calculateAverage(assistantBreakTimes); // Ensure this line is correct
+
         System.out.println("End of Day Report:");
-        System.out.printf("Total Wait Ticks: %d%n", totalWaitTicks.get());
-        System.out.printf("Total Work Ticks: %d%n", totalWorkTicks.get());
-        System.out.printf("Total Break Ticks: %d%n", totalBreakTicks.get());
-        // Include additional analysis and metrics as needed.
+        System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
+        System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
+        System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime); // Ensure this line is correct
+        // Include additional metrics as needed
     }
-    
+
+    private double calculateAverage(List<Integer> times) {
+        if (times.isEmpty()) return 0.0;
+        return times.stream().mapToInt(i -> i).average().orElse(0.0);
+    }
+
+
     
     // private double calculateAverage(List<Integer> times) {
     //     if (times.isEmpty()) return 0.0;
@@ -372,6 +383,7 @@ public class ThriftStore {
     public synchronized void recordAssistantBreakTime(int breakTime) {
         assistantBreakTimes.add(breakTime);
     }
+    
     public boolean isStoreBusy() {
         // Example: Consider the store busy if the number of active customers exceeds a threshold
         return getActiveCustomerCount() > config.busyCustomerThreshold;
