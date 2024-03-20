@@ -69,11 +69,11 @@ public class Assistant implements Runnable {
         Config config = store.getConfig();
 
         int breakDuration = config.breakDurationTicks;
-        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Taking a break for %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, breakDuration));
+        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] is taking a break for %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, breakDuration));
 
         Thread.sleep(breakDuration * ThriftStore.TICK_TIME_SIZE);
         ticksSinceLastBreak = 0; // Reset the counter after the break.
-        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Back from break.", store.getCurrentTick(), Thread.currentThread().getId(), id));
+        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] is back from break.", store.getCurrentTick(), Thread.currentThread().getId(), id));
 
         store.recordAssistantBreakTime(breakDuration); // Record the break time for reporting purposes.
     }
@@ -87,7 +87,7 @@ public class Assistant implements Runnable {
     private void waitOnDeliveries() throws InterruptedException {
         //Sleeping for an unknown amount of time simulates the wait for deliveries.
         int waitTicks = random.nextInt(50) + 50;
-        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Waiting for deliveries for %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, waitTicks));
+        logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] is waiting for deliveries for %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, waitTicks));
         Thread.sleep(waitTicks * ThriftStore.TICK_TIME_SIZE);
         ticksSinceLastBreak += waitTicks; //Calculate the wait time for the next break interval.
     }
@@ -96,15 +96,15 @@ public class Assistant implements Runnable {
         itemsToStock.forEach((section, itemCount) -> {
             try {
                 int walkToTicks = 10 + itemCount;
-                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Walking to %s with %d items, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, section, itemCount, walkToTicks));
+                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] has collected %d items and is walking to %s to stock it with them, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, itemCount, section,  walkToTicks));
                 Thread.sleep(walkToTicks * ThriftStore.TICK_TIME_SIZE);
 
                 int stockingTicks = itemCount;
-                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Stocking %s section with %d items, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, section, itemCount, stockingTicks));
+                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] is stocking %s section with %d items, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, section, itemCount, stockingTicks));
                 Thread.sleep(stockingTicks * ThriftStore.TICK_TIME_SIZE);
 
                 int returnTicks = 10;
-                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d] Returning from %s section, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, section, returnTicks));
+                logAndUpdateGUI(String.format("<Tick %d> [Thread %d] [Assistant %d]is returning from %s section after stocking, taking %d ticks.", store.getCurrentTick(), Thread.currentThread().getId(), id, section, returnTicks));
                 Thread.sleep(returnTicks * ThriftStore.TICK_TIME_SIZE);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();

@@ -261,26 +261,13 @@ public class ThriftStore {
     }
     
 
-    // private Map<String, Integer> generateRandomDelivery() {
-    //     Map<String, Integer> delivery = new HashMap<>();
-    //     int itemsLeft = randgen.nextInt(config.maxItemsPerDelivery) + 1; // Adjust maximum items per delivery
-    //     String[] sectionNames = sections.keySet().toArray(new String[0]);
-    //     while (itemsLeft > 0) {
-    //         String section = sectionNames[randgen.nextInt(sectionNames.length)];
-    //         int items = randgen.nextInt(itemsLeft) + 1;
-    //         delivery.put(section, delivery.getOrDefault(section, 0) + items);
-    //         itemsLeft -= items;
-    //     }
-    //     return delivery;
-    // }
-
-
     //method for incrementing tick count
     public void incrementTickCountBy(int ticks) {
         for (int i = 0; i < ticks; i++) {
             tickCount.incrementAndGet();
             // Optionally simulate real-time passing with Thread.sleep(TICK_TIME_SIZE);
         }
+        //For debugging purposes
         System.out.printf("Global tick count increased by %d, total now %d ticks.\n", ticks, tickCount.get());
     }
 
@@ -300,13 +287,12 @@ public class ThriftStore {
         // log a message at the end of each day
         if (tickCount.get() % 1000 == 0) {
             System.out.printf("<Tick %d> The day has ended. Preparing for a new day.%n", tickCount.get());
-            generateEnhancedReport();
+            TradeoffsAnalysis();
         }
         
     }
     
-    
-    
+        
     // generating the initial delivery of items
     private Map<String, Integer> generateInitialDelivery() {
         Map<String, Integer> initialDelivery = new HashMap<>();
@@ -354,49 +340,31 @@ public class ThriftStore {
         String deliveryDetails = delivery.entrySet().stream()
                                          .map(entry -> entry.getKey() + ": " + entry.getValue())
                                          .collect(Collectors.joining(", "));
-        System.out.printf("<Tick %d> Delivery received: %s%n", getCurrentTick(), deliveryDetails);
+        System.out.printf("<Tick %d> Deposit of items: %s%n", getCurrentTick(), deliveryDetails);
     }
     
         
-
-    // Enhanced reporting method
-    // public void generateEnhancedReport() {
-    //     double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
-    //     double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
-    //     double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
-        
-    //     System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
-    //     System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
-    //     System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime);
-        
-    //     System.out.println("Distribution of Customer Wait Times: " + calculateDistribution(customerWaitTimes));
-    //     System.out.println("Distribution of Assistant Work Times: " + calculateDistribution(assistantWorkTimes));
-    //     System.out.println("Distribution of Assistant Break Times: " + calculateDistribution(assistantBreakTimes));
-    
-    //     double customerWaitToWorkRatio = averageCustomerWaitTime / averageAssistantWorkTime;
-    //     System.out.printf("Customer Wait to Assistant Work Ratio: %.2f\n", customerWaitToWorkRatio);
-    
-    //     System.out.println("Work Time Distribution:\n" + generateHistogram(assistantWorkTimes));
-    //     System.out.println("Wait Time Distribution:\n" + generateHistogram(customerWaitTimes));
-    //     System.out.println("Break Time Distribution:\n" + generateHistogram(assistantBreakTimes));
-    // }
-
-    // The enhanced report generation method
-    public void generateEnhancedReport() {
+    // The report generation method
+    public void TradeoffsAnalysis() {
         double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
         double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
-        double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
 
-        String report = String.format("End of Day Report:\n" +
+        String workBalanceMessage;
+        if (averageAssistantWorkTime > averageCustomerWaitTime) {
+            workBalanceMessage = "Assistants are overworking and should take more breaks.";
+        } else {
+            workBalanceMessage = "Assistants should work more to reduce customers' wait times.";
+        }
+
+        String report = String.format("The day has ended, preparing for a new day! <1000 ticks> \n\n" + "End of Day Report and Analysis of Tradeoffs:\n" +
                 "Average Customer Wait Time: %.2f ticks\n" +
-                "Average Assistant Work Time: %.2f ticks\n" +
-                "Average Assistant Break Time: %.2f ticks\n" +
-                "\n", averageCustomerWaitTime, averageAssistantWorkTime, averageAssistantBreakTime);
+                "Average Assistant Work Time: %.2f ticks\n\n" +
+                "%s\n", averageCustomerWaitTime, averageAssistantWorkTime, workBalanceMessage);
 
-        // Logging to the terminal
+        // Logging to the console
         System.out.println(report);
 
-        // Updating the GUI with the report
+        // Updating the GUI with the report and work balance message
         if (gui != null) {
             gui.updateAnalysisReport(report);
         }
@@ -414,30 +382,6 @@ public class ThriftStore {
         customerWaitTimes.add(waitTime);
     }
 
-    
-    // private String calculateDistribution(List<Integer> times) {
-    //     if (times.isEmpty()) return "No data";
-    //     Map<Integer, Long> distribution = times.stream().collect(Collectors.groupingBy(t -> t, Collectors.counting()));
-    //     return distribution.entrySet().stream()
-    //             .sorted(Map.Entry.comparingByKey())
-    //             .map(entry -> entry.getKey() + " ticks: " + entry.getValue())
-    //             .collect(Collectors.joining(", "));
-    // }
-    
-    // private String generateHistogram(List<Integer> times) {
-    //     if (times.isEmpty()) return "No data";
-    //     final int INTERVAL = 10;
-    //     Map<Integer, Integer> histogram = new TreeMap<>();
-    //     times.forEach(time -> {
-    //         int key = (time / INTERVAL) * INTERVAL;
-    //         histogram.put(key, histogram.getOrDefault(key, 0) + 1);
-    //     });
-    //     StringBuilder histogramBuilder = new StringBuilder();
-    //     histogram.forEach((key, value) ->
-    //         histogramBuilder.append(String.format("%3d - %3d | %s\n", key, key + INTERVAL - 1, "*".repeat(value)))
-    //     );
-    //     return histogramBuilder.toString();
-    // }
 
     //store the assistant work time
     public synchronized void recordAssistantWorkTime(int workTime) {
