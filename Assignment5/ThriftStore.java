@@ -155,39 +155,39 @@ public class ThriftStore {
 
     public boolean canStockSection(String sectionName) {
         Section section = sections.get(sectionName);
-        return section != null && !section.isStocking();
+        return section != null && !section.isBeingStocked();
     }
 
     public void startStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.startStocking();
+            section.startStockingProcess();
         }
     }
 
     public boolean sectionIsBeingStocked(String sectionName) {
         Section section = sections.get(sectionName);
-        return section != null && section.isStocking();
+        return section != null && section.isBeingStocked();
     }
 
     public void stockSection(String sectionName, int itemCount) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.addItem(itemCount);
+            section.addItemFromSection(itemCount);
         }
     }
 
     public void finishStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.finishStocking();
+            section.finishStockingProcess();
         }
     }
 
     public boolean buyItemFromSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            return section.removeItem();
+            return section.removeItemFromSection();
         }
         return false;
     }
@@ -284,7 +284,7 @@ public class ThriftStore {
                                             .map(e -> e.getKey() + "=" + e.getValue())
                                             .collect(Collectors.joining(", "));
         System.out.printf("<Tick %d> The first delivery: %s%n", getCurrentTick(), deliveryLog);
-        initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItem(itemCount));
+        initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItemFromSection(itemCount));
     }
     
 

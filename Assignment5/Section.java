@@ -4,79 +4,88 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Section {
     private final String name;
-    private int itemCount;
-    private final Lock lock = new ReentrantLock();
-    private final Condition condition = lock.newCondition();
-    private volatile boolean isStocking = false;
+    private int itemCount; // num of items in the section
+    private final Lock lock = new ReentrantLock(); // Control who can access what in a given section using a lock
+    private final Condition condition = lock.newCondition(); //Coordination of add/remove operations and their conditional variables
+    private volatile boolean isBeingStocked = false;
 
+    // Section constructor
     public Section(String name, int initialItems) {
         this.name = name;
         this.itemCount = initialItems;
     }
 
-    public void addItem(int count) {
+    // Incorporates 'count' items into the section as it awaits restocking
+    public void addItemFromSection(int count) {
         lock.lock();
         try {
-            while (isStocking) {
+            // Do not stock till; Wait
+            while (isBeingStocked) {
                 condition.await();
             }
-            itemCount += count;
-            condition.signalAll();
+            itemCount += count; // Update the item's count
+            condition.signalAll(); // Notify every thread that is waiting
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            Thread.currentThread().interrupt(); // Indicate that this topic should be interrupted
         } finally {
             lock.unlock();
         }
     }
 
-    public boolean removeItem() {
+    // This method waits if there are no items available or if the section is being restocked before attempting to remove an item from it.
+    public boolean removeItemFromSection() {
         lock.lock();
         try {
-            while (itemCount == 0 || isStocking) {
+            // Wait while there is no item or stocking.
+            while (itemCount == 0 || isBeingStocked) {
                 condition.await();
             }
             if (itemCount > 0) {
                 itemCount--;
-                condition.signalAll();
+                condition.signalAll(); // inform all threads that are waiting
                 return true;
             }
             return false;
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            Thread.currentThread().interrupt(); // Set the thread's stop flag
             return false;
         } finally {
             lock.unlock();
         }
     }
 
-    public void startStocking() {
+    // Method Starts the process of stocking
+    public void startStockingProcess() {
         lock.lock();
         try {
-            isStocking = true;
+            isBeingStocked = true;
         } finally {
             lock.unlock();
         }
     }
 
-    public void finishStocking() {
+    // Method Ends the process of stocking
+    public void finishStockingProcess() {
         lock.lock();
         try {
-            isStocking = false;
-            condition.signalAll();
+            isBeingStocked = false;
+            condition.signalAll(); // inform all threads that are waiting
         } finally {
             lock.unlock();
         }
     }
 
-    public boolean isStocking() {
+    // Verifies the present status of section stocking
+    public boolean isBeingStocked() {
         lock.lock();
         try {
-            return isStocking;
+            return isBeingStocked;
         } finally {
             lock.unlock();
         }
     }
 
+    // Retrieves the current number of items in the section
     public int getItemCount() {
         lock.lock();
         try {
@@ -86,11 +95,11 @@ public class Section {
         }
     }
 
-    // Added method
+    // Verifies if the section has a low stock level, using a predetermined threshold.
     public boolean isLowOnStock() {
         lock.lock();
         try {
-            return itemCount <= 2; // Or any other threshold you define
+            return itemCount <= 2; // low stock threshold
         } finally {
             lock.unlock();
         }
