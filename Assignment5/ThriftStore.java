@@ -4,72 +4,92 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * Represents a thrift store managing deliveries, assistants, and customers behaviour.
+ * It simulates store operations including stocking and purchasing items.
+ */
+
 public class ThriftStore {
-    private final Config config;
-    private ThriftStoreGUI gui;
-    public static final int INITIAL_SECTION_ITEMS = 5;
-    public static final int TICK_TIME_SIZE = 50; // 50 ms = 1 tick
-    private final Map<String, Section> sections = new ConcurrentHashMap<>();
-    private final AtomicInteger tickCount = new AtomicInteger();
-    private final Random randgen = new Random();
-    private final Object deliveryLock = new Object();
-    private Map<String, Integer> itemsForDelivery = new HashMap<>();
-    public AtomicInteger nextAssistantId = new AtomicInteger(1);
-    public AtomicInteger nextCustomerId = new AtomicInteger(1);
-    private List<Assistant> assistantsList = new CopyOnWriteArrayList<>();
-    private List<Customer> customersList = new CopyOnWriteArrayList<>();
-    // Enhanced metrics tracking
-    private final List<Integer> customerWaitTimes = Collections.synchronizedList(new ArrayList<>());
-    private final List<Integer> assistantWorkTimes = Collections.synchronizedList(new ArrayList<>());
-    private List<Integer> assistantBreakTimes = new ArrayList<>();
-    private AtomicInteger totalWaitTicks = new AtomicInteger();
-    private AtomicInteger totalWalkTicks = new AtomicInteger();
-    private AtomicInteger totalStockTicks = new AtomicInteger();
-    private AtomicInteger totalBreakTicks = new AtomicInteger();
-    private AtomicInteger totalWorkTicks = new AtomicInteger();
+    private final Config config; // Store configuration
+    private ThriftStoreGUI gui; // Graphical user interface for the store
+    public static final int INITIAL_SECTION_ITEMS = 5; // Initial items per section
+    public static final int TICK_TIME_SIZE = 50; // Duration of a tick in milliseconds
+    private final Map<String, Section> sections = new ConcurrentHashMap<>(); // Sections in the store
+    private final AtomicInteger tickCount = new AtomicInteger(); // Global tick count for simulation
+    private final Random randgen = new Random(); // Random generator for various operations
+    private final Object deliveryLock = new Object(); // Lock for synchronizing delivery operations
+    private Map<String, Integer> itemsForDelivery = new HashMap<>(); // Items waiting to be stocked
+    public AtomicInteger nextAssistantId = new AtomicInteger(1); // ID generator for assistants
+    public AtomicInteger nextCustomerId = new AtomicInteger(1); // ID generator for customers
+    private List<Assistant> assistantsList = new CopyOnWriteArrayList<>(); // List of store assistants
+    private List<Customer> customersList = new CopyOnWriteArrayList<>(); // List of store customers
+    private final List<Integer> customerWaitTimes = Collections.synchronizedList(new ArrayList<>()); // An array to store customer wait times
+    private final List<Integer> assistantWorkTimes = Collections.synchronizedList(new ArrayList<>()); // An array to store assistant work times
+    private List<Integer> assistantBreakTimes = new ArrayList<>(); // An array to store assistant breaks
+    private AtomicInteger totalWaitTicks = new AtomicInteger(); // Initialiasing customer total wait ticks
+    private AtomicInteger totalWalkTicks = new AtomicInteger(); // Initialising assistant total walk ticks
+    private AtomicInteger totalStockTicks = new AtomicInteger(); // Initialising assistant total stock ticks
+    private AtomicInteger totalBreakTicks = new AtomicInteger(); // Initialising assistant total break ticks
+    private AtomicInteger totalWorkTicks = new AtomicInteger(); // Initialising assistant total work ticks
 
 
+    /**
+     * Creates a ThriftStore object with the specified configurations.
+     *
+     * @param config Configuration parameters for the thriftstore.
+     */
 
     public ThriftStore(Config config) {
         this.config = config;
         initializeSections();
         initialDelivery();
-        gui = new ThriftStoreGUI();
+        gui = new ThriftStoreGUI(); // Initialise GUI
     }
 
     public ThriftStoreGUI getGui() {
         return this.gui;
     }
     
-
+     /**
+     * Adds ticks to the total wait ticks.
+     *
+     * @param ticks The number of ticks to add.
+     */
     public synchronized void addWaitTicks(int ticks) {
         totalWaitTicks.addAndGet(ticks);
     }
 
+    //add current ticks to total walk ticks
     public synchronized void addWalkTicks(int ticks) {
         totalWalkTicks.addAndGet(ticks);
     }
 
+    //add current ticks to total stock ticks
     public synchronized void addStockTicks(int ticks) {
         totalStockTicks.addAndGet(ticks);
     }
 
+    //add current ticks to total break ticks
     public synchronized void addBreakTicks(int ticks) {
         totalBreakTicks.addAndGet(ticks);
     }
 
+    //add current ticks to total work ticks
     public synchronized void addWorkTicks(int ticks) {
         totalWorkTicks.addAndGet(ticks);
     }
     
     
-    // Method to add an assistant
+    /**
+     * Adds an assistant to the store.
+     *
+     * @param assistant The assistant to add.
+     */
     public void addAssistant(Assistant assistant) {
         assistantsList.add(assistant);
     }
@@ -84,13 +104,19 @@ public class ThriftStore {
         return assistantsList;
     }
 
+    //getters for customer list
     public List<Customer> getCustomersList() {
         return customersList;
     }
 
+    //getters for config
     public Config getConfig() {
         return config;
     }
+
+    /**
+     * Initializes the sections of the store based on the configuration.
+     */
     private void initializeSections() {
         // Initialize each section type based on its configured number
         addSections("electronics", config.numberOfElectronicsSections, INITIAL_SECTION_ITEMS);
@@ -101,12 +127,21 @@ public class ThriftStore {
         addSections("books", config.numberOfBooksSections, INITIAL_SECTION_ITEMS);
     }
     
+     /**
+     * Adds sections to the store.
+     *
+     * @param baseName     The base name of the section.
+     * @param count        The number of sections to add.
+     * @param initialItems The initial number of items for each section.
+     */
     private void addSections(String baseName, int count, int initialItems) {
         for (int i = 1; i <= count; i++) {
             String sectionName = baseName + (count > 1 ? " " + i : "");
             sections.put(sectionName, new Section(sectionName, initialItems));
         }
     }
+
+
     public boolean isSectionPopular(String sectionName) {
         // Example threshold for popularity; adjust based on simulation needs
         final double popularityThreshold = 0.15;
@@ -127,6 +162,7 @@ public class ThriftStore {
         return purchaseProbabilities.getOrDefault(baseSectionName, 0.0) > popularityThreshold;
     }
 
+    //method for taking items from the delivery box
     public Map<String, Integer> takeItemsFromDelivery() {
         synchronized (deliveryLock) {
             Map<String, Integer> itemsToStock = new HashMap<>(itemsForDelivery);
@@ -135,29 +171,36 @@ public class ThriftStore {
         }
     }
 
+    //meyhod for checking if a section needs to be restocked
     public boolean sectionsNeedRestocking() {
         return sections.values().stream().anyMatch(section -> section.isLowOnStock());
     }
 
+
+    //method for checking if a deklivery boc is empty
     public boolean deliveryBoxIsEmpty() {
         return itemsForDelivery.isEmpty();
     }
 
+    //method for checking if a section is low on items
     public boolean sectionIsLowOnStock(String sectionName) {
         Section section = sections.get(sectionName);
         return section != null && section.isLowOnStock();
     }
 
+    // method for checking if a section has items 
     public boolean sectionHasItems(String sectionName) {
         Section section = sections.get(sectionName);
         return section != null && section.getItemCount() > 0;
     }
 
+    //method for checking if the section can be stocked, that is, if it is not being stocked by another assistant
     public boolean canStockSection(String sectionName) {
         Section section = sections.get(sectionName);
         return section != null && !section.isStocking();
     }
 
+    //method for customers to start stocking a section
     public void startStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
@@ -165,11 +208,13 @@ public class ThriftStore {
         }
     }
 
+    //method to check if a section is currently being stocked
     public boolean sectionIsBeingStocked(String sectionName) {
         Section section = sections.get(sectionName);
         return section != null && section.isStocking();
     }
 
+    //method for stocking a section
     public void stockSection(String sectionName, int itemCount) {
         Section section = sections.get(sectionName);
         if (section != null) {
@@ -177,6 +222,7 @@ public class ThriftStore {
         }
     }
 
+    //method for checking if an assistant hjas finished stocking
     public void finishStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
@@ -184,6 +230,7 @@ public class ThriftStore {
         }
     }
 
+    //method for customers to buy items from a section
     public boolean buyItemFromSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
@@ -192,6 +239,7 @@ public class ThriftStore {
         return false;
     }
 
+    //mnethod for getting the name of sections
     public String[] getSectionNames() {
         return sections.keySet().toArray(new String[0]);
     }
@@ -201,30 +249,33 @@ public class ThriftStore {
         return tickCount.get();
     }
 
+    //method for getting delivery lock
     public Object getDeliveryLock() {
         return deliveryLock;
     }
 
+    //method for simulating delivery
     public synchronized void simulateDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
         logDelivery(delivery); // This method should log the delivery details.
     }
     
 
-    private Map<String, Integer> generateRandomDelivery() {
-        Map<String, Integer> delivery = new HashMap<>();
-        int itemsLeft = randgen.nextInt(config.maxItemsPerDelivery) + 1; // Adjust maximum items per delivery
-        String[] sectionNames = sections.keySet().toArray(new String[0]);
-        while (itemsLeft > 0) {
-            String section = sectionNames[randgen.nextInt(sectionNames.length)];
-            int items = randgen.nextInt(itemsLeft) + 1;
-            delivery.put(section, delivery.getOrDefault(section, 0) + items);
-            itemsLeft -= items;
-        }
-        return delivery;
-    }
+    // private Map<String, Integer> generateRandomDelivery() {
+    //     Map<String, Integer> delivery = new HashMap<>();
+    //     int itemsLeft = randgen.nextInt(config.maxItemsPerDelivery) + 1; // Adjust maximum items per delivery
+    //     String[] sectionNames = sections.keySet().toArray(new String[0]);
+    //     while (itemsLeft > 0) {
+    //         String section = sectionNames[randgen.nextInt(sectionNames.length)];
+    //         int items = randgen.nextInt(itemsLeft) + 1;
+    //         delivery.put(section, delivery.getOrDefault(section, 0) + items);
+    //         itemsLeft -= items;
+    //     }
+    //     return delivery;
+    // }
 
 
+    //method for incrementing tick count
     public void incrementTickCountBy(int ticks) {
         for (int i = 0; i < ticks; i++) {
             tickCount.incrementAndGet();
@@ -245,19 +296,18 @@ public class ThriftStore {
         tickCount.incrementAndGet();
         gui.updateTick(tickCount.get());
     
-        // Assuming 1000 ticks represent one day in the simulation,
+        // 1000 ticks represent one day in the simulation,
         // log a message at the end of each day
         if (tickCount.get() % 1000 == 0) {
             System.out.printf("<Tick %d> The day has ended. Preparing for a new day.%n", tickCount.get());
             generateEnhancedReport();
         }
         
-        // Additional simulation logic can be placed here, if necessary
     }
     
     
     
-
+    // generating the initial delivery of items
     private Map<String, Integer> generateInitialDelivery() {
         Map<String, Integer> initialDelivery = new HashMap<>();
         String[] categories = {"electronics", "clothing", "toys", "sporting goods", "furniture", "books"};
@@ -277,6 +327,7 @@ public class ThriftStore {
     }
     
 
+    //the first delivery of the day
     public synchronized void initialDelivery() {
         Map<String, Integer> initialDelivery = generateInitialDelivery(); // Adjusted line
         itemsForDelivery.putAll(initialDelivery);
@@ -287,15 +338,14 @@ public class ThriftStore {
         initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItem(itemCount));
     }
     
-
-
+    //process the delivery
     public synchronized void processDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
         logDelivery(delivery); // Log the delivery
         gui.updateDeliveryInfo(delivery.toString());
     }
     
-    
+    //log delivery actions
     private void logDelivery(Map<String, Integer> delivery) {
         if (delivery.isEmpty()) {
             System.out.println("<Tick " + getCurrentTick() + "> No items were delivered.");
@@ -337,13 +387,13 @@ public class ThriftStore {
         double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
         double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
 
-        String report = "The day is now over, preparing for a new day!\n End of Day Report:\n" +
-                String.format("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime) +
-                String.format("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime) +
-                String.format("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime) +
-                "\n"; // Additional metrics can be appended here.
+        String report = String.format("End of Day Report:\n" +
+                "Average Customer Wait Time: %.2f ticks\n" +
+                "Average Assistant Work Time: %.2f ticks\n" +
+                "Average Assistant Break Time: %.2f ticks\n" +
+                "\n", averageCustomerWaitTime, averageAssistantWorkTime, averageAssistantBreakTime);
 
-        // Logging to the console
+        // Logging to the terminal
         System.out.println(report);
 
         // Updating the GUI with the report
@@ -352,17 +402,18 @@ public class ThriftStore {
         }
     }
 
+    //calculate the averages
     private double calculateAverage(List<Integer> times) {
         if (times.isEmpty()) return 0.0;
         return times.stream().mapToInt(i -> i).average().orElse(0.0);
     }
 
+    //store customer wait time
+    public synchronized void recordCustomerWaitTime(int waitTime) {
+        System.out.println("Recording wait time: " + waitTime); // Debug log
+        customerWaitTimes.add(waitTime);
+    }
 
-    
-    // private double calculateAverage(List<Integer> times) {
-    //     if (times.isEmpty()) return 0.0;
-    //     return times.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-    // }
     
     // private String calculateDistribution(List<Integer> times) {
     //     if (times.isEmpty()) return "No data";
@@ -388,11 +439,7 @@ public class ThriftStore {
     //     return histogramBuilder.toString();
     // }
 
-    // Enhanced methods to update metrics (called from appropriate places in Assistant and Customer classes)
-    public synchronized void recordCustomerWaitTime(int waitTime) {
-        customerWaitTimes.add(waitTime);
-    }
-
+    //store the assistant work time
     public synchronized void recordAssistantWorkTime(int workTime) {
         assistantWorkTimes.add(workTime);
     }
@@ -401,8 +448,9 @@ public class ThriftStore {
         assistantBreakTimes.add(breakTime);
     }
     
+    // check if the store is busy
     public boolean isStoreBusy() {
-        // Example: Consider the store busy if the number of active customers exceeds a threshold
+       // store is busy if the number of active customers exceeds a threshold
         return getActiveCustomerCount() > config.busyCustomerThreshold;
     }
     
@@ -411,6 +459,13 @@ public class ThriftStore {
         return customersList.size(); // Simplified example
     }
 
+
+    /**
+     * Main method to simulate thrift store operation.
+     *
+     * @param args Command-line arguments
+     * @throws InterruptedException if the simulation thread is interrupted.
+     */
     public static void main(String[] args) throws InterruptedException {
             Config config = new Config(
             3, // numberOfAssistants
