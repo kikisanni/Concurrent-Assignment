@@ -197,28 +197,28 @@ public class ThriftStore {
     //method for checking if the section can be stocked, that is, if it is not being stocked by another assistant
     public boolean canStockSection(String sectionName) {
         Section section = sections.get(sectionName);
-        return section != null && !section.isStocking();
+        return section != null && !section.isBeingStocked();
     }
 
     //method for customers to start stocking a section
     public void startStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.startStocking();
+            section.startStockingProcess();
         }
     }
 
     //method to check if a section is currently being stocked
     public boolean sectionIsBeingStocked(String sectionName) {
         Section section = sections.get(sectionName);
-        return section != null && section.isStocking();
+        return section != null && section.isBeingStocked();
     }
 
     //method for stocking a section
     public void stockSection(String sectionName, int itemCount) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.addItem(itemCount);
+            section.addItemFromSection(itemCount);
         }
     }
 
@@ -226,7 +226,7 @@ public class ThriftStore {
     public void finishStockingSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            section.finishStocking();
+            section.finishStockingProcess();
         }
     }
 
@@ -234,7 +234,7 @@ public class ThriftStore {
     public boolean buyItemFromSection(String sectionName) {
         Section section = sections.get(sectionName);
         if (section != null) {
-            return section.removeItem();
+            return section.removeItemFromSection();
         }
         return false;
     }
@@ -335,14 +335,14 @@ public class ThriftStore {
                                             .map(e -> e.getKey() + "=" + e.getValue())
                                             .collect(Collectors.joining(", "));
         System.out.printf("<Tick %d> The first delivery: %s%n", getCurrentTick(), deliveryLog);
-        initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItem(itemCount));
+        initialDelivery.forEach((sectionName, itemCount) -> sections.get(sectionName).addItemFromSection(itemCount));
     }
     
     //process the delivery
     public synchronized void processDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
         logDelivery(delivery); // Log the delivery
-        gui.updateDeliveryInfo(delivery.toString());
+        gui.updateDeliveryInformation(delivery.toString());
     }
     
     //log delivery actions

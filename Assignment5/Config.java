@@ -71,6 +71,4 @@ public class Config {
         public void setDeliveryFrequencyTicks(int deliveryFrequencyTicks) {
             this.deliveryFrequencyTicks = deliveryFrequencyTicks;
         }
-    
-    
 }
