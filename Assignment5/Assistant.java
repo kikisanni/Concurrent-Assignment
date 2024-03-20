@@ -98,3 +98,9 @@ public class Assistant implements Runnable {
         store.getGui().updateAssistantInfo(message);
     }
 }
+
+
+
+
+
+

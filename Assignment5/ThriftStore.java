@@ -335,13 +335,21 @@ public class ThriftStore {
     public void generateEnhancedReport() {
         double averageCustomerWaitTime = calculateAverage(customerWaitTimes);
         double averageAssistantWorkTime = calculateAverage(assistantWorkTimes);
-        double averageAssistantBreakTime = calculateAverage(assistantBreakTimes); // Ensure this line is correct
+        double averageAssistantBreakTime = calculateAverage(assistantBreakTimes);
 
-        System.out.println("End of Day Report:");
-        System.out.printf("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime);
-        System.out.printf("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime);
-        System.out.printf("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime); // Ensure this line is correct
-        // Include additional metrics as needed
+        String report = "The day is now over, preparing for a new day!\n End of Day Report:\n" +
+                String.format("Average Customer Wait Time: %.2f ticks\n", averageCustomerWaitTime) +
+                String.format("Average Assistant Work Time: %.2f ticks\n", averageAssistantWorkTime) +
+                String.format("Average Assistant Break Time: %.2f ticks\n", averageAssistantBreakTime) +
+                "\n"; // Additional metrics can be appended here.
+
+        // Logging to the console
+        System.out.println(report);
+
+        // Updating the GUI with the report
+        if (gui != null) {
+            gui.updateAnalysisReport(report);
+        }
     }
 
     private double calculateAverage(List<Integer> times) {
