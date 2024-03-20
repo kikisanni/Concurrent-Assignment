@@ -4,7 +4,7 @@ import java.awt.*;
 public class ThriftStoreGUI {
     private JFrame frame;
     private JLabel tickLabel;
-    private JTextArea sectionInfoArea;
+    // private JTextArea sectionInfoArea;
     private JTextArea assistantInfoArea;
     private JTextArea customerInfoArea;
     private JTextArea deliveryInfoArea;
@@ -24,20 +24,29 @@ public class ThriftStoreGUI {
         topPanel.add(tickLabel);
 
         JPanel centerPanel = new JPanel(new GridLayout(1, 3));
-        sectionInfoArea = new JTextArea(10, 20);
-        assistantInfoArea = new JTextArea(10, 20);
-        customerInfoArea = new JTextArea(10, 20);
-        sectionInfoArea.setBorder(BorderFactory.createTitledBorder("Sections"));
+        // sectionInfoArea = new JTextArea(10, 20);
+        assistantInfoArea = new JTextArea(10, 30);
+        customerInfoArea = new JTextArea(10, 30);
+        deliveryInfoArea = new JTextArea(5, 60);
+
+        // sectionInfoArea.setBorder(BorderFactory.createTitledBorder("Sections"));
         assistantInfoArea.setBorder(BorderFactory.createTitledBorder("Assistants"));
         customerInfoArea.setBorder(BorderFactory.createTitledBorder("Customers"));
+        deliveryInfoArea.setBorder(BorderFactory.createTitledBorder("Deliveries"));
 
-        centerPanel.add(new JScrollPane(sectionInfoArea));
+        // Set text areas to wrap lines and be non-editable
+        JTextArea[] areas = {assistantInfoArea, customerInfoArea, deliveryInfoArea};
+        for (JTextArea area : areas) {
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setEditable(false);
+        }
+
+        // centerPanel.add(new JScrollPane(sectionInfoArea));
         centerPanel.add(new JScrollPane(assistantInfoArea));
         centerPanel.add(new JScrollPane(customerInfoArea));
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        deliveryInfoArea = new JTextArea(5, 60);
-        deliveryInfoArea.setBorder(BorderFactory.createTitledBorder("Deliveries"));
         bottomPanel.add(new JScrollPane(deliveryInfoArea), BorderLayout.CENTER);
 
         frame.add(topPanel, BorderLayout.NORTH);
@@ -51,24 +60,27 @@ public class ThriftStoreGUI {
         SwingUtilities.invokeLater(() -> tickLabel.setText("Tick: " + tick));
     }
 
-    public void updateSectionInfo(String info) {
-        SwingUtilities.invokeLater(() -> sectionInfoArea.setText(info));
+    private void updateTextArea(JTextArea textArea, String info) {
+        SwingUtilities.invokeLater(() -> textArea.append(info + "\n"));
     }
 
+    // public void updateSectionInfo(String info) {
+    //     updateTextArea(sectionInfoArea, info);
+    // }
+
     public void updateAssistantInfo(String info) {
-        SwingUtilities.invokeLater(() -> assistantInfoArea.setText(info));
+        updateTextArea(assistantInfoArea, info);
     }
 
     public void updateCustomerInfo(String info) {
-        SwingUtilities.invokeLater(() -> customerInfoArea.setText(info));
+        updateTextArea(customerInfoArea, info);
     }
 
     public void updateDeliveryInfo(String info) {
-        SwingUtilities.invokeLater(() -> deliveryInfoArea.setText(info));
+        updateTextArea(deliveryInfoArea, info);
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ThriftStoreGUI::new);
     }
 }
-
