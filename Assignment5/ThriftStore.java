@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 public class ThriftStore {
     private final Config config;
+    private ThriftStoreGUI gui;
     public static final int INITIAL_SECTION_ITEMS = 5;
     public static final int TICK_TIME_SIZE = 50; // 50 ms = 1 tick
     private final Map<String, Section> sections = new ConcurrentHashMap<>();
@@ -39,7 +40,13 @@ public class ThriftStore {
         this.config = config;
         initializeSections();
         initialDelivery();
+        gui = new ThriftStoreGUI();
     }
+
+    public ThriftStoreGUI getGui() {
+        return this.gui;
+    }
+    
 
     public synchronized void addWaitTicks(int ticks) {
         totalWaitTicks.addAndGet(ticks);
@@ -236,6 +243,7 @@ public class ThriftStore {
     public void simulateTick() {
         // Increment the tick count for each simulation tick
         tickCount.incrementAndGet();
+        gui.updateTick(tickCount.get());
     
         // Assuming 1000 ticks represent one day in the simulation,
         // log a message at the end of each day
@@ -284,6 +292,7 @@ public class ThriftStore {
     public synchronized void processDelivery(Map<String, Integer> delivery) {
         itemsForDelivery.putAll(delivery);
         logDelivery(delivery); // Log the delivery
+        gui.updateDeliveryInfo(delivery.toString());
     }
     
     
