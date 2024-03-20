@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
 
 public class ThriftStoreGUI {
     private JFrame frame;
@@ -20,102 +21,90 @@ public class ThriftStoreGUI {
         frame = new JFrame("ThriftStore Simulation");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
-        frame.setLayout(new BorderLayout(5, 5)); // Add some spacing
+        frame.setLayout(new BorderLayout(5, 5));
 
-        // Top Panel
+        // Enhancing Top Panel
         JPanel topPanel = new JPanel(new FlowLayout());
-        topPanel.setBackground(Color.DARK_GRAY); // Setting the background color of the top panel
+        topPanel.setBackground(new Color(64, 64, 64)); // A darker shade for contrast
 
-        // Tick Label
+        // Enhancing Tick Label
         tickLabel = new JLabel("Tick: 0");
-        tickLabel.setForeground(new Color(255, 255, 0)); // Bright yellow for emphasis
-        tickLabel.setFont(new Font("Serif", Font.BOLD, 16)); // Making the font larger and bold
+        tickLabel.setForeground(new Color(255, 215, 0)); // Gold color for prominence
+        tickLabel.setFont(new Font("Serif", Font.BOLD, 18));
         topPanel.add(tickLabel);
 
-        // Terminate Button
+        // Enhancing Terminate Button
         terminateButton = new JButton("Terminate");
-        terminateButton.setBackground(new Color(255, 69, 0)); // Reddish background
-        terminateButton.setForeground(Color.WHITE); // White text
-        terminateButton.setFocusPainted(false); // No focus ring around the text
-        terminateButton.setFont(new Font("Arial", Font.BOLD, 12)); // Stylish font
-        terminateButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                frame.dispose(); // Close the GUI
-                System.exit(0); // Terminate the application
-            }
+        terminateButton.setBackground(new Color(220, 20, 60)); // Crisp red background for urgency
+        terminateButton.setForeground(Color.WHITE); // Ensuring text is visible with white color
+        terminateButton.setFocusPainted(false);
+        terminateButton.setFont(new Font("Arial", Font.BOLD, 14));
+        terminateButton.setBorder(BorderFactory.createRaisedBevelBorder()); // Adding a beveled border for a 3D effect
+        terminateButton.addActionListener(e -> {
+            frame.dispose();
+            System.exit(0);
         });
         topPanel.add(terminateButton);
 
-        // Center Panel
+        // Setting up the Center Panel
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
-        // Text Areas
-        assistantInfoArea = new JTextArea(10, 30);
-        customerInfoArea = new JTextArea(10, 30);
-        deliveryInfoArea = new JTextArea(10, 30);
-        analysisReportArea = new JTextArea(10, 30);
+        // Text Areas Setup
+        assistantInfoArea = createTextArea("Assistants");
+        customerInfoArea = createTextArea("Customers");
+        deliveryInfoArea = createTextArea("Deliveries");
+        analysisReportArea = createTextArea("Analysis Report");
 
-        // Background Colors
-        Color lightBlue = new Color(204, 229, 255);
-        assistantInfoArea.setBackground(lightBlue);
-        customerInfoArea.setBackground(lightBlue);
-        deliveryInfoArea.setBackground(lightBlue);
-        analysisReportArea.setBackground(lightBlue);
-
-        // Borders
-        assistantInfoArea.setBorder(BorderFactory.createTitledBorder("Assistants"));
-        customerInfoArea.setBorder(BorderFactory.createTitledBorder("Customers"));
-        deliveryInfoArea.setBorder(BorderFactory.createTitledBorder("Deliveries"));
-        analysisReportArea.setBorder(BorderFactory.createTitledBorder("Analysis Report"));
-
-        // Text Areas Array
+        // Adding Text Areas to the Center Panel
         JTextArea[] areas = {assistantInfoArea, customerInfoArea, deliveryInfoArea, analysisReportArea};
-        for (JTextArea area : areas) {
-            area.setLineWrap(true);
-            area.setWrapStyleWord(true);
-            area.setEditable(false);
+        Arrays.stream(areas).forEach(area -> {
             JScrollPane scrollPane = new JScrollPane(area);
             scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
             centerPanel.add(scrollPane);
-        }
+        });
 
-        // Add Panels to Frame
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(centerPanel, BorderLayout.CENTER);
-
-        // Show GUI
         frame.setVisible(true);
+    }
+
+    private JTextArea createTextArea(String title) {
+        JTextArea textArea = new JTextArea(10, 30);
+        textArea.setBackground(new Color(230, 230, 250)); // Lavender background for a gentle feel
+        textArea.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(105, 105, 105), 2), title));
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setEditable(false);
+        return textArea;
     }
 
     public void updateTick(int tick) {
         SwingUtilities.invokeLater(() -> tickLabel.setText("Tick: " + tick));
     }
-    
+
     private void updateTextArea(JTextArea textArea, String info) {
         SwingUtilities.invokeLater(() -> textArea.append(info + "\n"));
     }
-    
+
     public void updateAssistantInfo(String info) {
         updateTextArea(assistantInfoArea, info);
     }
-    
+
     public void updateCustomerInfo(String info) {
         updateTextArea(customerInfoArea, info);
     }
-    
+
     public void updateDeliveryInfo(String info) {
         updateTextArea(deliveryInfoArea, info);
     }
-    
+
     public void updateAnalysisReport(String info) {
         SwingUtilities.invokeLater(() -> {
             analysisReportArea.setText(""); // Optionally clear previous content
             analysisReportArea.append(info);
         });
     }
-    
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(ThriftStoreGUI::new);
