@@ -34,13 +34,14 @@ public class Customer implements Runnable {
                 String sectionToBuyFrom = selectRandomSection(); // Select a random section to buy from
                 boolean purchased = false; // Track to see if the purchase was successful
                 int waitedTicksForThisPurchase = 0; // Ticks waited for the current purchase attempt
-
+    
                 while (!purchased) {
                     if (store.sectionIsBeingStocked(sectionToBuyFrom) || !store.sectionHasItems(sectionToBuyFrom)) {
                         // Check if the customer needs to leave due to excessive waiting
                         if (waitedTicksForThisPurchase >= MAX_WAIT_TICKS) {
                             logAndGUIUpdate(String.format("<Tick %d> [Thread %d] Customer %d leaves after waiting too long in %s section.",
                                 store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom));
+                            store.recordCustomerWaitTime(waitedTicksForThisPurchase); // Record the wait time before leaving
                             return; // Leave the store
                         }
                         waitedTicksForThisPurchase++; // Increment wait time
@@ -49,18 +50,19 @@ public class Customer implements Runnable {
                         // Make a purchase and update wait time and log
                         store.buyItemFromSection(sectionToBuyFrom);
                         purchased = true; // Flag it as true if purchase was successful
-                        totalWaitTime += waitedTicksForThisPurchase; // Update total wait time by the waited ticks for the current purchase
+                        totalWaitTime += waitedTicksForThisPurchase; // Update total wait time by the waited ticks for this current purchase
                         logAndGUIUpdate(String.format("<Tick %d> [Thread %d] Customer %d successfully purchased from %s section after waiting for %d ticks.",
                                 store.getCurrentTick(), Thread.currentThread().getId(), id, sectionToBuyFrom, waitedTicksForThisPurchase));
+                        store.recordCustomerWaitTime(waitedTicksForThisPurchase); // Record the wait time after successful purchase
                     }
                 }
-                store.recordCustomerWaitTime(totalWaitTime); // store the customer's total wait time
-                simulateShoppingDelay(); // Simulate delay between shopping actions of customers
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            store.recordCustomerWaitTime(totalWaitTime); // records total wait time upon thread interruption
+            if (totalWaitTime > 0) {
+                store.recordCustomerWaitTime(totalWaitTime); // Ensure total wait time is recorded when thread finishes
+            }
         }
     }
 
