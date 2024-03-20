@@ -1,8 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.Arrays;
 
 public class ThriftStoreGUI {
     private JFrame frame;
@@ -22,33 +20,34 @@ public class ThriftStoreGUI {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
         frame.setLayout(new BorderLayout(5, 5));
+        frame.getContentPane().setBackground(new Color(173, 216, 230)); // Light blue background for the whole GUI
 
-        // Enhancing Top Panel
-        JPanel topPanel = new JPanel(new FlowLayout());
-        topPanel.setBackground(new Color(64, 64, 64)); // A darker shade for contrast
+        // Top Panel
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 5)); // Increased horizontal gap
+        topPanel.setBackground(new Color(173, 216, 230)); // Light blue background
 
-        // Enhancing Tick Label
+        // Tick Label
         tickLabel = new JLabel("Tick: 0");
-        tickLabel.setForeground(new Color(255, 215, 0)); // Gold color for prominence
+        tickLabel.setForeground(Color.BLACK); // Dark gray for contrast
         tickLabel.setFont(new Font("Serif", Font.BOLD, 18));
         topPanel.add(tickLabel);
 
-        // Enhancing Terminate Button
+        // Terminate Button
         terminateButton = new JButton("Terminate");
-        terminateButton.setBackground(new Color(220, 20, 60)); // Crisp red background for urgency
-        terminateButton.setForeground(Color.WHITE); // Ensuring text is visible with white color
+        terminateButton.setBackground(new Color(30, 144, 255)); // Dodger blue for better visibility
+        terminateButton.setForeground(Color.BLACK); // White text
         terminateButton.setFocusPainted(false);
         terminateButton.setFont(new Font("Arial", Font.BOLD, 14));
-        terminateButton.setBorder(BorderFactory.createRaisedBevelBorder()); // Adding a beveled border for a 3D effect
         terminateButton.addActionListener(e -> {
             frame.dispose();
             System.exit(0);
         });
         topPanel.add(terminateButton);
 
-        // Setting up the Center Panel
+        // Center Panel
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setBackground(new Color(173, 216, 230)); // Light blue background
 
         // Text Areas Setup
         assistantInfoArea = createTextArea("Assistants");
@@ -56,13 +55,13 @@ public class ThriftStoreGUI {
         deliveryInfoArea = createTextArea("Deliveries");
         analysisReportArea = createTextArea("Analysis Report");
 
-        // Adding Text Areas to the Center Panel
+        // Add Text Areas to Center Panel
         JTextArea[] areas = {assistantInfoArea, customerInfoArea, deliveryInfoArea, analysisReportArea};
-        Arrays.stream(areas).forEach(area -> {
+        for (JTextArea area : areas) {
             JScrollPane scrollPane = new JScrollPane(area);
             scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
             centerPanel.add(scrollPane);
-        });
+        }
 
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(centerPanel, BorderLayout.CENTER);
@@ -71,8 +70,8 @@ public class ThriftStoreGUI {
 
     private JTextArea createTextArea(String title) {
         JTextArea textArea = new JTextArea(10, 30);
-        textArea.setBackground(new Color(230, 230, 250)); // Lavender background for a gentle feel
-        textArea.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(105, 105, 105), 2), title));
+        textArea.setBackground(new Color(240, 248, 255)); // Alice blue background for a soft feel
+        textArea.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY, 2), title));
         textArea.setLineWrap(true);
         textArea.setWrapStyleWord(true);
         textArea.setEditable(false);
@@ -82,23 +81,23 @@ public class ThriftStoreGUI {
     public void updateTick(int tick) {
         SwingUtilities.invokeLater(() -> tickLabel.setText("Tick: " + tick));
     }
-
+    
     private void updateTextArea(JTextArea textArea, String info) {
         SwingUtilities.invokeLater(() -> textArea.append(info + "\n"));
     }
-
+    
     public void updateAssistantInfo(String info) {
         updateTextArea(assistantInfoArea, info);
     }
-
+    
     public void updateCustomerInfo(String info) {
         updateTextArea(customerInfoArea, info);
     }
-
+    
     public void updateDeliveryInfo(String info) {
         updateTextArea(deliveryInfoArea, info);
     }
-
+    
     public void updateAnalysisReport(String info) {
         SwingUtilities.invokeLater(() -> {
             analysisReportArea.setText(""); // Optionally clear previous content
